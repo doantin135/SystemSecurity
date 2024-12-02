@@ -5,40 +5,53 @@ const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = require('
 
 const router = express.Router();
 
-// SECRET_KEY cho JWT
-const SECRET_KEY = 'hsuuniversity'; // Đảm bảo SECRET_KEY của bạn là bí mật và an toàn.
+const SECRET_KEY = 'hsuuniversity';
 
-// Register with Email & Password
 router.post('/register', async (req, res) => {
   const { email, password, name } = req.body;
-
+  
   try {
-    // Tạo tài khoản người dùng Firebase
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-
-    // Optional: Cập nhật thông tin tên người dùng
     await admin.auth().updateUser(user.uid, { displayName: name });
+    await admin.firestore().collection('Users').doc(user.uid).set({
+      email: email,
+      name: name,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      photo: '',
+    });
 
-    // Tạo JWT token
-    const token = jwt.sign({ uid: user.uid, email: user.email }, SECRET_KEY, { expiresIn: '2h' });
+    const token = jwt.sign(
+      { uid: user.uid, email: user.email }, 
+      SECRET_KEY, 
+      { expiresIn: '2h' }
+    );
 
-    res.status(201).json({ message: 'User registered successfully', token });
+    res.status(201).json({ 
+      message: 'User registered successfully', 
+      token,
+      user: {
+        uid: user.uid,
+        email: user.email,
+        name: name
+      }
+    });
+
   } catch (error) {
+    if (error.code && user) {
+      await admin.auth().deleteUser(user.uid);
+    }
     res.status(400).json({ message: error.message });
   }
 });
 
-// Login with Email & Password
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Đăng nhập vào Firebase và lấy thông tin người dùng
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Tạo JWT token
     const token = jwt.sign({ uid: user.uid, email: user.email }, SECRET_KEY, { expiresIn: '2h' });
 
     res.status(200).json({ message: 'Login successful', token });
@@ -47,25 +60,49 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Google Login
 router.post('/google-login', async (req, res) => {
-  const { idToken } = req.body; // Token từ phía client (Google)
-
+  const { idToken } = req.body;
   try {
-    // Xác thực ID token từ Google
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const user = await admin.auth().getUser(decodedToken.uid);
 
-    // Tạo JWT token sau khi xác thực Google
-    const token = jwt.sign({ uid: user.uid, email: user.email }, SECRET_KEY, { expiresIn: '2h' });
+    const userDoc = await admin.firestore()
+      .collection('Users')
+      .doc(user.uid)
+      .get();
 
-    res.status(200).json({ message: 'Google login successful', token });
+    if (!userDoc.exists) {
+      await admin.firestore().collection('Users').doc(user.uid).set({
+        email: user.email,
+        name: user.displayName || '',
+        photo: user.photoURL || '',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        authProvider: 'google',
+      });
+    }
+
+    const token = jwt.sign(
+      { uid: user.uid, email: user.email },
+      SECRET_KEY,
+      { expiresIn: '2h' }
+    );
+
+    res.status(200).json({ 
+      message: 'Google login successful', 
+      token,
+      user: {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName,
+        photoURL: user.photoURL
+      }
+    });
+
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-// Logout (handled client-side)
 router.post('/logout', async (req, res) => {
   try {
     await auth.signOut();
@@ -75,7 +112,6 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Middleware để xác thực JWT trong các route bảo vệ
 const verifyToken = (req, res, next) => {
   const token = req.headers['authorization'];
 
@@ -88,12 +124,11 @@ const verifyToken = (req, res, next) => {
       return res.status(401).json({ message: 'Invalid or expired token' });
     }
 
-    req.user = decoded; // Lưu thông tin người dùng vào request
-    next(); // Tiến hành xử lý tiếp theo
+    req.user = decoded;
+    next();
   });
 };
 
-// Ví dụ route bảo vệ
 router.get('/profile', verifyToken, (req, res) => {
   res.status(200).json({ message: 'Profile data', user: req.user });
 });
