@@ -1,6 +1,8 @@
 /backend/node_modules
+/backend/serviceAccountKey.json
 
 /project/final/node_modules
 
 Thumbs.db
 *.DS_Store
+
