@@ -1,0 +1,6 @@
+/backend/node_modules
+
+/project/final/node_modules
+
+Thumbs.db
+*.DS_Store
