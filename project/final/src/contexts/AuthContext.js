@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      axios.get('http://localhost:8888/api/auth/profile', {
+      axios.get('https://localhost:8888/api/auth/profile', {
         headers: { Authorization: token }
       })
       .then(response => {
@@ -29,13 +29,13 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:8888/api/auth/login', {
+      const response = await axios.post('https://localhost:8888/api/auth/login', {
         email,
         password
       });
       const { token } = response.data;
       localStorage.setItem('token', token);
-      const userResponse = await axios.get('http://localhost:8888/api/auth/profile', {
+      const userResponse = await axios.get('https://localhost:8888/api/auth/profile', {
         headers: { Authorization: token }
       });
       setUser(userResponse.data.user);
@@ -47,14 +47,14 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, name) => {
     try {
-      const response = await axios.post('http://localhost:8888/api/auth/register', {
+      const response = await axios.post('https://localhost:8888/api/auth/register', {
         email,
         password,
         name
       });
       const { token } = response.data;
       localStorage.setItem('token', token);
-      const userResponse = await axios.get('http://localhost:8888/api/auth/profile', {
+      const userResponse = await axios.get('https://localhost:8888/api/auth/profile', {
         headers: { Authorization: token }
       });
       setUser(userResponse.data.user);
@@ -66,12 +66,12 @@ export const AuthProvider = ({ children }) => {
 
   const googleLogin = async (idToken) => {
     try {
-      const response = await axios.post('http://localhost:8888/api/auth/google-login', {
+      const response = await axios.post('https://localhost:8888/api/auth/google-login', {
         idToken
       });
       const { token } = response.data;
       localStorage.setItem('token', token);
-      const userResponse = await axios.get('http://localhost:8888/api/auth/profile', {
+      const userResponse = await axios.get('https://localhost:8888/api/auth/profile', {
         headers: { Authorization: token }
       });
       setUser(userResponse.data.user);
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await axios.post('http://localhost:8888/api/auth/logout');
+      await axios.post('https://localhost:8888/api/auth/logout');
       localStorage.removeItem('token');
       setUser(null);
     } catch (error) {
