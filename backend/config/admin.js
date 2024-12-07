@@ -1,6 +1,7 @@
 const admin = require('firebase-admin');
 const { initializeApp } = require('firebase/app');
 const { getAuth } = require('firebase/auth');
+const NodeRSA = require('node-rsa');
 
 const serviceAccount = require('../serviceAccountKey.json');
 
@@ -22,4 +23,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = admin.firestore();
 
-module.exports = { admin, auth, db };
+const key = new NodeRSA({ b: 512 });
+const publicKey = key.exportKey('public');
+const privateKey = key.exportKey('private');
+
+function encryptPassword(password) {
+  const encrypted = key.encrypt(password, 'base64');
+  return encrypted;
+}
+
+module.exports = { admin, auth, db, encryptPassword, publicKey, privateKey };

@@ -1,5 +1,5 @@
 const express = require('express');
-const { admin, auth } = require('../config/admin');
+const { admin, auth, encryptPassword, publicKey, privateKey } = require('../config/admin');
 const jwt = require('jsonwebtoken');
 const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = require('firebase/auth');
 
@@ -9,8 +9,9 @@ const SECRET_KEY = 'hsuuniversity';
 
 router.post('/register', async (req, res) => {
   const { email, password, name } = req.body;
-  
+
   try {
+    const encryptedPassword = encryptPassword(password);
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     await admin.auth().updateUser(user.uid, { displayName: name });
@@ -19,16 +20,17 @@ router.post('/register', async (req, res) => {
       name: name,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       photo: '',
+      encryptedPassword: encryptedPassword,
     });
 
     const token = jwt.sign(
-      { uid: user.uid, email: user.email }, 
-      SECRET_KEY, 
+      { uid: user.uid, email: user.email },
+      SECRET_KEY,
       { expiresIn: '2h' }
     );
 
-    res.status(201).json({ 
-      message: 'User registered successfully', 
+    res.status(201).json({
+      message: 'User registered successfully',
       token,
       user: {
         uid: user.uid,
@@ -51,6 +53,9 @@ router.post('/login', async (req, res) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
+
+    const userDoc = await admin.firestore().collection('Users').doc(user.uid).get();
+    const encryptedPassword = userDoc.data().encryptedPassword;
 
     const token = jwt.sign({ uid: user.uid, email: user.email }, SECRET_KEY, { expiresIn: '2h' });
 
@@ -87,8 +92,8 @@ router.post('/google-login', async (req, res) => {
       { expiresIn: '2h' }
     );
 
-    res.status(200).json({ 
-      message: 'Google login successful', 
+    res.status(200).json({
+      message: 'Google login successful',
       token,
       user: {
         uid: user.uid,
