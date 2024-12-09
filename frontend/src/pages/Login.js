@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Container, Form, Button, Alert } from 'react-bootstrap';
-import { GoogleAuthProvider, signInWithPopup, getAuth } from 'firebase/auth';
-import { app } from '../config/firebase'; 
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { Container, Form, Button, Alert } from "react-bootstrap";
+import { GoogleAuthProvider, signInWithPopup, getAuth } from "firebase/auth";
+import { app } from "../config/firebase";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const auth = getAuth(app);
@@ -16,10 +16,23 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await login(email, password);
-      navigate('/');
+      const role = await login(email, password);
+      switch (role) {
+        case "admin":
+          navigate("/classes");
+          break;
+        case "lecturer":
+          navigate("/classes_lecturer");
+          break;
+        case "student":
+          navigate("/classes_student");
+          break;
+        default:
+          navigate("/unauthorized");
+          break;
+      }
     } catch (error) {
-      setError('Failed to log in');
+      setError("Failed to log in");
     }
   };
 
@@ -28,16 +41,32 @@ const Login = () => {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
-      await googleLogin(idToken);
-      navigate('/');
+      const role = await googleLogin(idToken);
+      switch (role) {
+        case "admin":
+          navigate("/classes");
+          break;
+          case "lecturer":
+            navigate("/classes_lecturer");
+            break;
+          case "student":
+            navigate("/classes_student");
+            break;
+          default:
+            navigate("/unauthorized");
+            break;
+      }
     } catch (error) {
-      setError('Failed to log in with Google');
+      setError("Failed to log in with Google");
     }
   };
 
   return (
-    <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <div className="w-100" style={{ maxWidth: '400px' }}>
+    <Container
+      className="d-flex align-items-center justify-content-center"
+      style={{ minHeight: "100vh" }}
+    >
+      <div className="w-100" style={{ maxWidth: "400px" }}>
         <h2 className="text-center mb-4">Sign In</h2>
         {error && <Alert variant="danger">{error}</Alert>}
         <Form onSubmit={handleSubmit}>
@@ -66,19 +95,15 @@ const Login = () => {
           <Button variant="primary" type="submit" className="w-100 mb-3">
             Sign In
           </Button>
-          
-          <Button 
-            variant="outline-primary" 
+
+          <Button
+            variant="outline-primary"
             className="w-100 mb-3"
             onClick={handleGoogleLogin}
           >
             Sign In with Google
           </Button>
         </Form>
-        
-        <div className="text-center mt-3">
-          Don't have an account? <Link to="/register">Sign Up</Link>
-        </div>
       </div>
     </Container>
   );
