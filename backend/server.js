@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const fs = require('fs');
+const https = require('https');
 const app = express();
 
 app.use(cors());
@@ -17,7 +19,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:8888',
+        url: 'https://localhost:8888',
         description: 'Development server',
       },
     ],
@@ -55,10 +57,16 @@ app.use((err, req, res, next) => {
   });
 });
 
+const privateKey = fs.readFileSync('certs/private_key.pem', 'utf8');
+const certificate = fs.readFileSync('certs/certificate.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate, passphrase: 'vvvv' };
+
 const PORT = process.env.PORT || 8888;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Swagger documentation is available at http://localhost:${PORT}/api-docs`);
+const httpsServer = https.createServer(credentials, app);
+
+httpsServer.listen(PORT, () => {
+  console.log(`HTTPS Server is running on https://localhost:${PORT}`);
+  console.log(`Swagger documentation is available at https://localhost:${PORT}/api-docs`);
   console.log('Swagger specification:', JSON.stringify(swaggerSpec, null, 2));
 });
 

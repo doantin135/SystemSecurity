@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  axios.defaults.baseURL = "http://localhost:8888";
+  axios.defaults.baseURL = "https://localhost:8888";
 
   axios.interceptors.request.use(
     (config) => {
