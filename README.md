@@ -60,3 +60,8 @@
 
 - Đảm bảo cài đặt Node.js phiên bản mới nhất để tránh lỗi trong quá trình cài đặt và chạy dự án.
 - Firebase cần được cấu hình trước khi khởi chạy backend. Chỉnh sửa file cấu hình Firebase nếu cần thiết.
+
+## Account 
+
+- admin@gmail.com
+- 654321
