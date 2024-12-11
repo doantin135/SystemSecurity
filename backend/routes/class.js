@@ -175,12 +175,13 @@ router.post(
  * /api/classes:
  *   get:
  *     summary: Get all classes (filtered by lecturer if role is lecturer)
+ *     description: Returns all classes. For lecturers, only returns their own classes.
  *     tags: [Classes]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of classes
+ *         description: List of classes retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -188,9 +189,23 @@ router.post(
  *               items:
  *                 $ref: '#/components/schemas/Class'
  *       401:
- *         description: Unauthorized
+ *         description: Unauthorized - Missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  */
 router.get("/", verifyToken, async (req, res) => {
   try {

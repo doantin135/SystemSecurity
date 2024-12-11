@@ -4,10 +4,17 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const https = require('https');
-const crypto = require('crypto'); // Import crypto module
+const crypto = require('crypto'); 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: '*',  
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization'] 
+};
+
+app.use(cors(corsOptions)); 
 app.use(express.json());
 
 const swaggerOptions = {
@@ -24,6 +31,20 @@ const swaggerOptions = {
         description: 'Development server',
       },
     ],
+    components: {  
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    },
+    security: [  
+      {
+        bearerAuth: []
+      }
+    ]
   },
   apis: [
     './routes/*.js',
