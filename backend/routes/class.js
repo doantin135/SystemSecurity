@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { admin } = require("../config/firebaseAdmin");
 const { verifyToken, checkRole } = require("../middleware/auth");
+const { encryptAES, decryptAES, encryptRSA, decryptRSA, encryptDES, decryptDES } = require('../utils  /encryption');
 
 /**
  * @swagger
@@ -330,10 +331,13 @@ router.put(
         return res.status(403).json({ message: "Permission denied" });
       }
 
+      const encryptedClassName = encryptAES(className).encryptedData; 
+      const encryptedLecturerName = encryptDES(lecturerName).encryptedData;
+
       const updateData = {
-        className,
+        className: encryptedClassName,
         lecturerId,
-        lecturerName,
+        lecturerName: encryptedLecturerName,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 

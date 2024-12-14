@@ -6,7 +6,7 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const SECRET_KEY = process.env.JWT_SECRET || 'hsuuniversity';
 const TOKEN_EXPIRES_IN = '2h';
-
+const { encryptAES, decryptAES, encryptRSA, decryptRSA, encryptDES, decryptDES } = require('../utils/encryption');
 /**
  * @swagger
  * components:
@@ -107,12 +107,15 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
 
+    const encryptedEmail = encryptAES(email).encryptedData; 
+    const encryptedName = encryptRSA(name).encryptedData;
+
     const userCredential = await createUserWithEmailAndPassword(clientAuth, email, password);
     const user = userCredential.user;
 
     const userData = {
-      email,
-      name,
+      email: encryptedEmail,
+      name: encryptedName,
       role,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       photo: '',

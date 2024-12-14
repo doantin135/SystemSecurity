@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { admin } = require('../config/firebaseAdmin');
 const { verifyToken, checkRole } = require('../middleware/auth');
+const { encryptAES } = require('../utils/encryption');
 
 /**
  * @swagger
@@ -124,9 +125,11 @@ router.put('/:uid', verifyToken, async (req, res) => {
     }
     
     if (updateData.email || updateData.name) {
+      const encryptedEmail = update.email ? encryptAES(update.email).encryptedData : undefined;
+      const encryptedName = update.name ? encryptRSA(update.name) : undefined;
       await admin.auth().updateUser(uid, {
-        email: updateData.email,
-        displayName: updateData.name
+        email: updateData.email ? encryptedEmail : undefined,
+        displayName: updateData.name ? encryptedName : undefined
       });
     }
     
