@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { admin } = require("../config/firebaseAdmin");
 const { verifyToken, checkRole } = require("../middleware/auth");
+const encryptionUtils = require('../utils/encryptionUtils');
 
 /**
  * @swagger
@@ -125,50 +126,45 @@ const validateClass = (req, res, next) => {
   next();
 };
 
-router.post(
-  "/",
-  verifyToken,
-  checkRole(["admin"]),
-  validateClass,
-  async (req, res) => {
-    try {
-      const { className, lecturerId, lecturerName } = req.body;
+router.post("/", verifyToken, checkRole(["admin"]), validateClass, async (req, res) => {
+  try {
+    const { className, lecturerId, lecturerName } = req.body;
 
-      // Verify if the lecturer exists in the system
-      const lecturerRef = admin.firestore().collection("Users").doc(lecturerId);
-      const lecturerDoc = await lecturerRef.get();
+    const lecturerRef = admin.firestore().collection("Users").doc(lecturerId);
+    const lecturerDoc = await lecturerRef.get();
 
-      if (!lecturerDoc.exists || lecturerDoc.data().role !== "lecturer") {
-        return res.status(400).json({
-          message: "Invalid lecturer ID or user is not a lecturer",
-        });
-      }
-
-      const classRef = admin.firestore().collection("Classes").doc();
-      await classRef.set({
-        classId: classRef.id,
-        className,
-        lecturerId,
-        lecturerName,
-        studentsCount: 0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        createdBy: req.user.uid, // Track who created the class
-      });
-
-      res.status(201).json({
-        message: "Class created successfully",
-        classId: classRef.id,
-      });
-    } catch (error) {
-      console.error("Error creating class:", error);
-      res.status(500).json({
-        message: "Failed to create class",
-        error: error.message,
+    if (!lecturerDoc.exists || lecturerDoc.data().role !== "lecturer") {
+      return res.status(400).json({
+        message: "Invalid lecturer ID or user is not a lecturer",
       });
     }
+
+    const classRef = admin.firestore().collection("Classes").doc();
+    
+    // Mã hóa dữ liệu 
+    await classRef.set({
+      classId: classRef.id,
+      className: encryptionUtils.encrypt(className),
+      lecturerId,
+      lecturerName: encryptionUtils.encrypt(lecturerName),
+      studentsCount: 0,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: req.user.uid,
+    });
+
+    res.status(201).json({
+      message: "Class created successfully",
+      classId: classRef.id,
+    });
+  } catch (error) {
+    console.error("Error creating class:", error);
+    res.status(500).json({
+      message: "Failed to create class",
+      error: error.message,
+    });
   }
-);
+});
 
 /**
  * @swagger
@@ -219,7 +215,10 @@ router.get("/", verifyToken, async (req, res) => {
     const classes = [];
 
     snapshot.forEach((doc) => {
-      classes.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      // Giải mã dữ liệu
+      const decryptedData = encryptionUtils.decryptObject(data);
+      classes.push({ id: doc.id, ...decryptedData });
     });
 
     res.status(200).json(classes);
@@ -387,39 +386,34 @@ router.put(
  *       500:
  *         description: Server error
  */
-router.post(
-  "/:classId/students",
-  verifyToken,
-  checkRole(["admin", "lecturer"]),
-  validateStudent,
-  async (req, res) => {
-    try {
-      const { classId } = req.params;
-      const { studentId, studentName } = req.body;
+router.post("/:classId/students", verifyToken, checkRole(["admin", "lecturer"]), validateStudent, async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { studentId, studentName } = req.body;
 
-      // Check if class exists
-      const classRef = admin.firestore().collection("Classes").doc(classId);
-      const classDoc = await classRef.get();
+    const classRef = admin.firestore().collection("Classes").doc(classId);
+    const classDoc = await classRef.get();
 
-      if (!classDoc.exists) {
-        return res.status(404).json({ message: "Class not found" });
-      }
-
-      const studentRef = classRef.collection("Students").doc(studentId);
-      await studentRef.set({
-        studentId,
-        studentName,
-      });
-      await classRef.update({
-        studentsCount: admin.firestore.FieldValue.increment(1),
-      });
-
-      res.status(201).json({ message: "Student added to class successfully" });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    if (!classDoc.exists) {
+      return res.status(404).json({ message: "Class not found" });
     }
+
+    const studentRef = classRef.collection("Students").doc(studentId);
+    
+    await studentRef.set({
+      studentId,
+      studentName: encryptionUtils.encrypt(studentName)
+    });
+    
+    await classRef.update({
+      studentsCount: admin.firestore.FieldValue.increment(1),
+    });
+
+    res.status(201).json({ message: "Student added to class successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
 /**
  * @swagger
@@ -469,7 +463,10 @@ router.get("/:classId/students", verifyToken, async (req, res) => {
     const students = [];
 
     studentsSnapshot.forEach((doc) => {
-      students.push(doc.data());
+      const data = doc.data();
+      // Giải mã dữ liệu
+      const decryptedStudent = encryptionUtils.decryptObject(data);
+      students.push(decryptedStudent);
     });
 
     res.status(200).json({ students });
